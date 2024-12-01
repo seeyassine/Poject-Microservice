@@ -26,7 +26,7 @@ class ProjetModel:
             query = "SELECT * FROM Projet"
             cursor.execute(query)
             projets = cursor.fetchall()
-            return {"projets": projets}  # Ensure that a dictionary is returned
+            return projets  # Return a list of dictionaries
         finally:
             cursor.close()
             conn.close()

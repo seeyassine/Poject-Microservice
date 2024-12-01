@@ -24,7 +24,10 @@ class CreateProjetResponse:
 class Query:
     @strawberry.field
     def lister_projets(self) -> list[Projet]:
+        # Get the list of projects
         projets = ProjetModel.lister_projets()
+
+        # Return a list of Projet objects, unpacking the dictionary for each project
         return [Projet(**projet) for projet in projets]
 
 @strawberry.type
