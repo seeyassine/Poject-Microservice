@@ -69,6 +69,10 @@ class Mutation:
         return "Projet introuvable"
 
 
+@app.route('/health', methods=['GET'])
+def health_check():
+    # You can add custom logic here for health checks (like checking the database connection)
+    return json.dumps({"status": "OK"}), 200
 
 # Create GraphQL schema
 schema = strawberry.Schema(query=Query, mutation=Mutation)
