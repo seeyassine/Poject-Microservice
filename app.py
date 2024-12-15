@@ -2,6 +2,7 @@ from flask import Flask
 from strawberry.flask.views import GraphQLView
 import strawberry
 from models.projet_model import ProjetModel
+import json
 
 app = Flask(__name__)
 
