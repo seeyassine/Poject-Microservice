@@ -1,12 +1,49 @@
-from flask import Flask
-from strawberry.flask.views import GraphQLView
-import strawberry
-from models.projet_model import ProjetModel
+import os
+import requests
 import json
+import socket
+from flask import Flask
+import strawberry
+from strawberry.flask.views import GraphQLView
+from models.projet_model import ProjetModel
+from py_eureka_client import eureka_client
+
 
 app = Flask(__name__)
 
-# Define GraphQL types
+# ======================
+# Fetching Configuration for the Service (Dynamic)
+# ======================
+def fetch_config(service_name):
+    config_service_url = os.getenv('CONFIG_SERVICE_URL', 'http://localhost:9999')
+    config_url = f'{config_service_url}/{service_name}/default'
+    try:
+        response = requests.get(config_url)
+        response.raise_for_status()  # Raise error for non-2xx responses
+        return response.json()
+    except requests.exceptions.RequestException as e:
+        print(f"Error fetching config: {e}")
+        return {}
+
+
+# ======================
+# Eureka Service Registration
+# ======================
+
+# Read Eureka server URL from the environment or fallback to localhost
+eureka_server_url = os.getenv('DISCOVERY_SERVICE_URL', 'http://localhost:8761/eureka')
+
+# Initialize Eureka client
+eureka_client.init(
+    app_name="project-service",           # Register with Eureka using service name
+    eureka_server=eureka_server_url,  # Use the Eureka server URL from the configuration
+    instance_port=5000,
+    instance_host=socket.gethostbyname(socket.gethostname()),
+)
+
+# ======================
+# GraphQL API Implementation
+# ======================
 @strawberry.type
 class Projet:
     id: int
@@ -25,10 +62,7 @@ class CreateProjetResponse:
 class Query:
     @strawberry.field
     def lister_projets(self) -> list[Projet]:
-        # Get the list of projects
         projets = ProjetModel.lister_projets()
-
-        # Return a list of Projet objects, unpacking the dictionary for each project
         return [Projet(**projet) for projet in projets]
 
     @strawberry.field
@@ -69,17 +103,24 @@ class Mutation:
             return "Projet supprimé avec succès"
         return "Projet introuvable"
 
-
+# ======================
+# Health Check Endpoint
+# ======================
 @app.route('/health', methods=['GET'])
 def health_check():
-    # You can add custom logic here for health checks (like checking the database connection)
     return json.dumps({"status": "OK"}), 200
 
-# Create GraphQL schema
-schema = strawberry.Schema(query=Query, mutation=Mutation)
-
-# Add the GraphQL view to Flask
-app.add_url_rule('/graphql', view_func=GraphQLView.as_view('graphql_view', schema=schema))
-
+# ======================
+# Flask Initialization and Dynamic Registration
+# ======================
 if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=5000, debug=True)
+    # Fetch config for dynamic settings
+    config = fetch_config('project-service')  # Fetch the service-specific configuration
+    
+    port = 5000  # Make sure this port is consistent with your application
+
+    # Set up GraphQL API schema and start Flask application
+    schema = strawberry.Schema(query=Query, mutation=Mutation)
+    app.add_url_rule('/graphql', view_func=GraphQLView.as_view('graphql_view', schema=schema))
+
+    app.run(host='0.0.0.0',port=port, debug=True)
