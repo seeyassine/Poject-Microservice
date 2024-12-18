@@ -20,6 +20,7 @@ def fetch_config(service_name):
     try:
         response = requests.get(config_url)
         response.raise_for_status()  # Raise error for non-2xx responses
+        print(f" fetching config: ", response.json())
         return response.json()
     except requests.exceptions.RequestException as e:
         print(f"Error fetching config: {e}")
@@ -52,6 +53,8 @@ class Projet:
     hum_max: float
     temp_max: float
     pompe_st: int
+    biologist_id: int  # Add the biologistId field
+    material_id: int   # Add the materialId field
 
 @strawberry.type
 class CreateProjetResponse:
@@ -81,17 +84,27 @@ class Query:
     def get_by_date(self, date: str) -> list[Projet]:
         projets = ProjetModel.get_by_date(date)
         return [Projet(**projet) for projet in projets]
+   
+    @strawberry.field
+    def get_by_biologist(self, biologist_id: int) -> list[Projet]:
+        projets = ProjetModel.get_by_biologist_id(biologist_id)
+        return [Projet(**projet) for projet in projets]
+
+    @strawberry.field
+    def get_by_material(self, material_id: int) -> list[Projet]:
+        projets = ProjetModel.get_by_material_id(material_id)
+        return [Projet(**projet) for projet in projets]
 
 @strawberry.type
 class Mutation:
     @strawberry.mutation
-    def creer_projet(self, titre: str, date: str, hum_max: float, temp_max: float, pompe_st: int) -> CreateProjetResponse:
-        projet_id = ProjetModel.creer_projet(titre, date, hum_max, temp_max, pompe_st)
+    def creer_projet(self, titre: str, date: str, hum_max: float, temp_max: float, pompe_st: int, biologist_id: int, material_id: int) -> CreateProjetResponse:
+        projet_id = ProjetModel.creer_projet(titre, date, hum_max, temp_max, pompe_st, biologist_id, material_id)
         return CreateProjetResponse(message="Projet créé avec succès", projet_id=projet_id)
 
     @strawberry.mutation
-    def update_projet(self, id: int, titre: str, date: str, hum_max: float, temp_max: float, pompe_st: int) -> str:
-        updated = ProjetModel.update_projet(id, titre, date, hum_max, temp_max, pompe_st)
+    def update_projet(self, id: int, titre: str, date: str, hum_max: float, temp_max: float, pompe_st: int, biologist_id: int, material_id: int) -> str:
+        updated = ProjetModel.update_projet(id, titre, date, hum_max, temp_max, pompe_st, biologist_id, material_id)
         if updated:
             return "Projet mis à jour avec succès"
         return "Projet introuvable"
